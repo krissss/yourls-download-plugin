@@ -1,11 +1,11 @@
 <?php
 /*
 Plugin Name: Download Plugin
-Plugin URI: http://your-own-domain-here.com/articles/hey-test-my-sample-plugin/
+Plugin URI: https://github.com/krissss/yourls-download-plugin
 Description: Download Plugin From Url
 Version: 1.0
 Author: Kriss
-Author URI: http://ozh.org/
+Author URI: https://github.com/krissss/
 */
 
 if (!defined('YOURLS_ABSPATH')) die();

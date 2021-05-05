@@ -7,7 +7,7 @@ Just copy an url and click download, plugin will be installed.
 
 ## Screenshot
 
-![](./screenshot.png?t=2)
+![](./screenshot2.png)
 
 ## Required
 

@@ -40,22 +40,19 @@ function kriss_download_plugin_page()
             <form method="post">
             <input type="hidden" name="nonce" value="$nonce" />
             <p>
-                <label>Github Url</label>
+                <label>Url</label>
                 <input type="text" name="github_url" value="" required />
+                <hint>support github, like: <code>https://github.com/krissss/yourls-download-plugin</code></hint>
             </p>
             <p>
-                <label>Github Branch</label>
+                <label>Branch</label>
                 <input type="text" name="github_branch" value="master" required />
+                <hint>which branch to download</hint>
             </p>
             <p>
                 <label>Name</label>
                 <input type="text" name="download_name" value="" />
-                <hint>optional, will get from github url</hint>
-            </p>
-            <p>
-                <label>Plugin path</label>
-                <input type="text" name="plugin_path" value="" />
-                <hint>optional, where plugin.php exist, root path default</hint>
+                <hint>optional, zip filename. If empty basename of url will be use</hint>
             </p>
             <p>
                 <label>Delete zip after unzip</label>
@@ -74,15 +71,17 @@ function kriss_download_plugin()
     $branch = $_POST['github_branch'];
     $name = $_POST['download_name'];
 
-    if (strpos($url, 'https://github.com/') !== 0) {
-        return [false, 'only github url support'];
+    // parse url
+    if (strpos($url, 'https://github.com/') === 0) {
+        list($downloadUrl, $unzipFolderName) = kriss_parse_github_url($url, $branch);
+    } else {
+        return [false, 'url not support'];
     }
 
-    // parse github url
-    $downloadUrl = "$url/archive/refs/heads/{$branch}.zip";
     $downloadName = $name ?: basename($url) . '.zip';
     $filepath = __DIR__ . '/../' . $downloadName;
     $unzipPath = __DIR__ . '/../';
+    $unzipFolderName = __DIR__ . '/../' . $unzipFolderName . '/';
 
     // download file
     if (file_exists($filepath)) {
@@ -100,12 +99,14 @@ function kriss_download_plugin()
         $unzipOk = true;
     }
 
-    // move plugin.php if need
-    if (isset($_POST['plugin_path']) && $_POST['plugin_path']) {
-        $pluginPath = $unzipPath . basename($url) . '-' . $branch . '/';
-        $realPluginPath = $pluginPath . trim($_POST['plugin_path'], '/') . '/';
-        var_dump($pluginPath, $realPluginPath);
-        copy($realPluginPath . 'plugin.php', $pluginPath . 'plugin.php');
+    // auto detect plugin root
+    $pluginPath = kriss_auto_detect_plugin_root($unzipFolderName, 'plugin.php');
+    if ($pluginPath === false) {
+        unlink($filepath);
+        return [false, 'no plugin.php find in zip'];
+    }
+    if ($unzipFolderName . 'plugin.php' !== $pluginPath) {
+        copy($pluginPath, $unzipFolderName . 'plugin.php');
     }
 
     // delete file
@@ -118,4 +119,24 @@ function kriss_download_plugin()
     }
 
     return [true, $downloadName];
+}
+
+function kriss_parse_github_url($url, $branch)
+{
+    $downloadUrl = "$url/archive/refs/heads/{$branch}.zip";
+    $unzipFolderName = basename($url) . '-' . $branch;
+
+    return [$downloadUrl, $unzipFolderName];
+}
+
+function kriss_auto_detect_plugin_root($path, $pluginName)
+{
+    $path = rtrim($path, '/');
+    if (file_exists($path . '/'. $pluginName)) {
+        return $path . '/'. $pluginName;
+    }
+    foreach (glob($path . '/*', GLOB_ONLYDIR) as $dir) {
+        return kriss_auto_detect_plugin_root($dir, $pluginName);
+    }
+    return false;
 }
